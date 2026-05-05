@@ -1,0 +1,52 @@
+\documentclass[9pt,twocolumn,twoside]{pnas-report}
+
+\templatetype{pnasresearcharticle}
+
+\usepackage{lipsum}
+
+\title{Chess Network}
+
+\author[a]{Vanja Stojanović}
+\author[a]{Matej Belšak} 
+\author[a]{Luka Bajić}
+
+\affil[a]{University of Ljubljana, Faculty of Computer and Information Science, Ve\v{c}na pot 113, SI-1000 Ljubljana, Slovenia}
+
+\leadauthor{Vanja Stojanović} 
+\authordeclaration{All authors contributed equally to this work.}
+\correspondingauthor{\textsuperscript{1}To whom correspondence should be addressed. E-mail: lb4129@student.uni-lj.si}
+
+\begin{abstract}
+Abstract
+\end{abstract}
+
+\dates{The manuscript was compiled on \today}
+\doi{\href{https://ucilnica.fri.uni-lj.si/course/view.php?id=183}{Introduction to Network Analysis} 2025/26}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{firststyle}
+\ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
+
+\dropcap{P}{\bf roblem definition, motivation, background, contributions etc.}
+\lipsum[1-4]
+
+\section*{Related work}
+
+\nocite{Kle00,Bou05,EB07,New08,For10,New12,FH16,PLC17,PDL18,Pei20}
+
+\section*{Results}
+
+\section*{Discussion}
+
+\section*{Methods}
+
+
+
+% \acknow{The authors would like to\dots}
+% \showacknow{}
+
+\bibliography{bibliography}
+
+\end{document}

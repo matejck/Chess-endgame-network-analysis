@@ -1,2 +1,17 @@
 /__pycache__
 /.vscode
+
+*.log
+*.bbx
+*.cbx
+*.cut
+*.bbl
+*.blg
+*.dvi
+*.out
+*.xcp
+*.dbx
+*.bst
+*.aux
+*.gz
+*.sty
