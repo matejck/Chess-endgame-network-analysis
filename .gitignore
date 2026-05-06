@@ -15,3 +15,5 @@
 *.aux
 *.gz
 *.sty
+
+*.adj
