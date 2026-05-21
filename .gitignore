@@ -15,5 +15,5 @@
 *.aux
 *.gz
 *.sty
-
 *.adj
+*/**/.DS_Store
