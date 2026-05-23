@@ -15,4 +15,4 @@
 *.aux
 *.gz
 *.adj
-*/**/.DS_Store
+.DS_Store
