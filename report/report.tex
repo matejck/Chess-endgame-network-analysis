@@ -6,9 +6,9 @@
 
 \title{Chess Network}
 
-\author[b]{Vanja Stojanović}
-\author[a]{Matej Belšak} 
 \author[a]{Luka Bajić}
+\author[a]{Matej Belšak}
+\author[b]{Vanja Stojanović}
 
 \affil[a]{University of Ljubljana, Faculty of Computer and Information Science, Ve\v{c}na pot 113, SI-1000 Ljubljana, Slovenia}
 \affil[b]{University of Ljubljana, Faculty of Mathemathics and Physics, Jadranska cesta 21, SI-1000 Ljubljana, Slovenia}
@@ -19,7 +19,7 @@
 \correspondingauthor{\textsuperscript{1}To whom correspondence should be addressed. E-mail: lb4129@student.uni-lj.si}
 
 \begin{abstract}
-Abstract
+This paper presents a novel use case of network analysis as a heuristic for chess engines. 
 \end{abstract}
 
 \dates{The manuscript was compiled on \today}
@@ -31,23 +31,32 @@ Abstract
 \thispagestyle{firststyle}
 \ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
 
-\dropcap{P}{\bf roblem definition, motivation, background, contributions etc.}
-\lipsum[1-4]
+\dropcap{M}{\bf odern chess engines use traditional search techniques}, such as alpha-beta pruning and deep learning-based evaluation of positions, to look for an optimal playing strategy. They do not, however, take into account the network structure of the state space, so the quality of the solution depends entirely on the quality of the evaluation model. 
+
+In this work, we propose a network analysis approach that could be used as a heuristic to guide the search, using properties of the neighborhood of a position, as opposed to individual position alone. Neighborhood can be defined in different ways, but the simplest and most complete is to take into account all legal moves from starting position up to a certain depth. Building a network in this manner can be computationally intensive, so we also show that randomly sampling from the entire neighborhood does, in fact, preserve the most important properties of the network. 
 
 \section*{Related work}
 
-\nocite{Kle00,Bou05,EB07,New08,For10,New12,FH16,PLC17,PDL18,Pei20}
+Network analysis has so far been applied to the domain of chess positions either as a means of encoding an individual position on the board \cite{chess} with the goal of predicting the outcome of the game, or as an analysis tool, for instance, of the openings with respect to the skill level of the players \cite{chess3}. In addition, clustering methods were used on the openings to infer the result or other properties of the game \cite{chess2}. 
 
 \section*{Results}
+
+We visualize results with Force Atlas 2 \cite{atlas}. 
+
+\section*{Methods}
 
 \section*{Discussion}
 
 \section*{Methods}
 
+\subsection*{Mathematical Modeling of Chess Positions}
 
+We treat chess positions as nodes in a graph, and transitions between positions as directed edges.
+In a directed chess position graph $D$, there exists a directed edge between two positions $v, u \in V(D)$ if and only if there positions are one valid chess move apart.
+This gives us a discrete distance between all chess moves, where reachable neighboring chess positions are exactly one distance apart.
 
-% \acknow{The authors would like to\dots}
-% \showacknow{}
+ \acknow{The authors would like to\dots}
+ \showacknow{}
 
 \bibliography{bibliography}
 
