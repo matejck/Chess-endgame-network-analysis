@@ -3,6 +3,7 @@
 \templatetype{pnasresearcharticle}
 
 \usepackage{lipsum}
+\usepackage{subcaption}
 
 \title{Chess Network}
 
@@ -31,20 +32,157 @@ This paper presents a novel use case of network analysis as a heuristic for ches
 \thispagestyle{firststyle}
 \ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
 
-\dropcap{M}{\bf odern chess engines use traditional search techniques}, such as alpha-beta pruning and deep learning-based evaluation of positions, to look for an optimal playing strategy. They do not, however, take into account the network structure of the state space, so the quality of the solution depends entirely on the quality of the evaluation model. 
+%\dropcap{M}{\bf odern chess engines use standard search techniques}, such as alpha-beta pruning and deep learning-based evaluation of positions, to look for an optimal playing strategy. They do not, however, typically take into account the macroscopic network structure of the state space, meaning the quality of the solution depends entirely on the evaluation of individual positions.
 
-In this work, we propose a network analysis approach that could be used as a heuristic to guide the search, using properties of the neighborhood of a position, as opposed to individual position alone. Neighborhood can be defined in different ways, but the simplest and most complete is to take into account all legal moves from starting position up to a certain depth. Building a network in this manner can be computationally intensive, so we also show that randomly sampling from the entire neighborhood does, in fact, preserve the most important properties of the network. 
+%In this work, we propose a network analysis approach that could be used as a heuristic to guide the search, using properties of the neighborhood of a position, as opposed to individual position alone. Neighborhood can be defined in different ways, but the simplest and most complete is to take into account all legal moves from starting position up to a certain depth. Building a network in this manner can be computationally intensive, so we also show that randomly sampling from the entire neighborhood does, in fact, preserve the most important properties of the network. 
+
+\dropcap{M}{\bf odern chess engines use standard search techniques} like alpha-beta pruning and deep learning to evaluate positions and look for an optimal playing strategy. However, they do not consider the network structure of the game's state space. This means the quality of the solution depends entirely on evaluating individual positions.
+
+In this work, we propose a network analysis approach to guide the search. Instead of evaluating a position in isolation, we assess the broader community of states it belongs to. The intuition behind this is that a seemingly good position might be fragile if it is surrounded by losing states. We map the local state space by exploring all legal moves from a starting position up to a limited depth using Depth First Search (DFS). By focusing on endgames with up to seven pieces, we can assign an exact Win, Draw or Loss (WDL) state to each node using Syzygy tablebases. We then extract distinct communities using the Leiden algorithm. To evaluate these groups, we introduce a new metric that rewards winning and drawing proportions while punishing losing states. By treating communities as nodes in a new graph, we model optimal and robust paths using Dijkstra's algorithm. This method naturally guides the search through safe regions of the state space while penalizing paths that pass through risky or bad communities.
+
+Building a full network takes a lot of computing power. Because of this, we also test if sampling the network keeps the same communities. We use Normalized Mutual Information (NMI) to evaluate how well two different sampling methods (random node selection and probabilistic DFS) preserve the original community structure. By comparing these techniques across different sampling rates, we investigate the trade-offs between reducing the network size and maintaining structural accuracy.
 
 \section*{Related work}
 
 Network analysis has so far been applied to the domain of chess positions either as a means of encoding an individual position on the board \cite{chess} with the goal of predicting the outcome of the game, or as an analysis tool, for instance, of the openings with respect to the skill level of the players \cite{chess3}. In addition, clustering methods were used on the openings to infer the result or other properties of the game \cite{chess2}. 
 
-\section*{Mathematical Modeling of Communities}
+\newpage
+\section*{Results}
+To evaluate our approach, we generated a state space network from the starting position with FEN: \emph{3r4/2k5/5P2/7K/8/8/8/8 b - - 0 1}. We bounded the generation to two different limits: a network bounded to a maximum depth of 5 and a larger network bounded to a depth of 7 to verify scalability.
+
+To identify favorable regions, we ranked communities by individual quality ($Q_{0.5}$) and calculated the cumulative path cost ($C_{0.5}$) from the community with starting state using Dijkstra's algorithm.
+
+To test structural robustness under computational constraints, we averaged the Normalized Mutual Information (NMI) over 25 repetitions for both random node and probabilistic DFS sampling across varying probabilities ($p$).
+
+\subsection{Network with maximum depth of 5}
+%We visualize networks using Force Atlas 2 \cite{atlas} graph layout algorithm. 
+We first evaluated the state space network bounded to a maximum search depth of 5.
+
+\begin{table}[ht!]
+\centering
+\caption{Comparison of the top 5 communities ranked by individual community quality ($Q_{0.5}$) and safest reachable targets by path cost ($Q_{0.5}$) for depth 5.}
+\begin{tabular}{l l l}
+\hline
+\textbf{Rank} & \textbf{Best $Q_{0.5}$ Scores} & \textbf{Lowest Path Cost ($C_{0.5}$)} \\
+\hline
+1 & Community 14 (0.938) & Community 11 (0.000) \\
+2 & Community 12 (0.897) & Community 1 (0.186) \\
+3 & Community 15 (0.891) & Community 14 (0.249) \\
+4 & Community 1 (0.831) & Community 12 (0.295) \\
+5 & Community 11 (0.820) & Community 15 (0.301) \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[ht!]
+\centering
+\caption{Preservation of community structure at depth 5 measured by average Normalized Mutual Information (NMI) across varying probabilities.}
+\begin{tabular}{l l l}
+\hline
+\textbf{Probability ($p$)} & \textbf{Node Sampling NMI} & \textbf{DFS Sampling NMI} \\
+\hline
+0.9 & 0.900 $\pm$ 0.023 & 0.865 $\pm$ 0.021 \\
+0.8 & 0.890 $\pm$ 0.018 & 0.829 $\pm$ 0.022 \\
+0.7 & 0.881 $\pm$ 0.027 & 0.781 $\pm$ 0.019 \\
+0.6 & 0.867 $\pm$ 0.022 & 0.725 $\pm$ 0.021 \\
+0.5 & 0.852 $\pm$ 0.015 & 0.659 $\pm$ 0.019 \\
+0.4 & 0.825 $\pm$ 0.016 & 0.590 $\pm$ 0.012 \\
+0.3 & 0.797 $\pm$ 0.014 & 0.519 $\pm$ 0.006 \\
+0.2 & 0.734 $\pm$ 0.012 & 0.432 $\pm$ 0.005 \\
+0.1 & 0.621 $\pm$ 0.009 & 0.303 $\pm$ 0.164 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Network with maximum depth of 7}
+
+To verify the scalability of our approach, we expanded the state space generation to a maximum depth of 7. 
+
+\begin{table}[ht!]
+\centering
+\caption{Comparison of the top 5 communities ranked by individual community quality ($Q_{0.5}$) and safest reachable targets by path cost ($C_{0.5}$) for depth 7.}
+\begin{tabular}{l l l}
+\hline
+\textbf{Rank} & \textbf{Best $Q_{0.5}$ Scores} & \textbf{Lowest Path Cost ($C_{0.5}$)} \\
+\hline
+1 & Community 19 (0.911) & Community 6 (0.000) \\
+2 & Community 21 (0.890) & Community 7 (0.164) \\
+3 & Community 22 (0.870) & Community 11 (0.204) \\
+4 & Community 7 (0.849)  & Community 19 (0.257) \\
+5 & Community 11 (0.816) & Community 21 (0.280) \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[ht!]
+\centering
+\caption{Preservation of community structure at depth 7 measured by average Normalized Mutual Information (NMI) across varying probabilities.}
+\begin{tabular}{l l l}
+\hline
+\textbf{Probability ($p$)} & \textbf{Node Sampling NMI} & \textbf{DFS Sampling NMI} \\
+\hline
+0.9 & 0.967 $\pm$ 0.011 & 0.941 $\pm$ 0.012 \\
+0.8 & 0.964 $\pm$ 0.011 & 0.898 $\pm$ 0.013 \\
+0.7 & 0.956 $\pm$ 0.014 & 0.841 $\pm$ 0.010 \\
+0.6 & 0.946 $\pm$ 0.015 & 0.777 $\pm$ 0.010 \\
+0.5 & 0.934 $\pm$ 0.014 & 0.692 $\pm$ 0.012 \\
+0.4 & 0.903 $\pm$ 0.017 & 0.584 $\pm$ 0.009 \\
+0.3 & 0.837 $\pm$ 0.016 & 0.459 $\pm$ 0.008 \\
+0.2 & 0.721 $\pm$ 0.021 & 0.463 $\pm$ 0.103 \\
+0.1 & 0.677 $\pm$ 0.017 & 0.426 $\pm$ 0.197 \\
+\hline
+\end{tabular}
+\end{table}
+
+
+% trim={left bottom right top}
+
+\clearpage
+\begin{figure*}[t!]
+    \centering
+    \begin{subfigure}{0.32\linewidth}
+        \includegraphics[width=\linewidth, trim={600 256 600 128}, clip]{results/network1/KRvKP_5_wdl.png}
+        \centering
+        \caption{Original network}
+    \end{subfigure}\hfill
+    \begin{subfigure}{0.32\linewidth}
+        \includegraphics[width=\linewidth, trim={600 256 600 128}, clip]{results/network1/KRvKP_5_leiden.png}
+        \centering
+        \caption{Original network with communities}
+    \end{subfigure}
+    \begin{subfigure}{0.32\linewidth}
+        \includegraphics[width=\linewidth, trim={512 128 512 128}, clip]{results/network1/KRvKP_5_community.png}
+        \centering
+        \caption{Community network}
+    \end{subfigure}
+    \caption{}
+    \label{networks_max_depth=5}
+\end{figure*}
+
+\begin{figure*}[t!]
+    \centering
+    \begin{subfigure}{0.32\linewidth}
+        \includegraphics[width=\linewidth, trim={512 128 512 128}, clip]{results/network2/KRvKP_7_wdl.png}
+        \centering
+        \caption{Original network}
+    \end{subfigure}\hfill
+    \begin{subfigure}{0.32\linewidth}
+        \includegraphics[width=\linewidth, trim={512 128 512 128}, clip]{results/network2/KRvKP_7_leiden.png}
+        \centering
+        \caption{Original network with communities}
+    \end{subfigure}
+    \begin{subfigure}{0.32\linewidth}
+        \includegraphics[width=\linewidth, trim={400 128 400 128}, clip]{results/network2/KRvKP_7_community.png}
+        \centering
+        \caption{Community network}
+    \end{subfigure}
+    \caption{}
+    \label{networks_max_depth=7}
+\end{figure*}
 
 
 
-We visualize results with Force Atlas 2 \cite{atlas}. 
-
+\clearpage
 \section*{Methods}
 
 \section*{Discussion}
@@ -57,8 +195,8 @@ We treat chess positions as nodes in a graph, and transitions between positions 
 In a directed chess position graph $D$, there exists a directed edge between two positions $v, u \in V(D)$ if and only if there positions are one valid chess move apart.
 This gives us a discrete distance between all chess moves, where reachable neighboring chess positions are exactly one distance apart.
 
- \acknow{The authors would like to\dots}
- \showacknow{}
+% \acknow{The authors would like to\dots}
+% \showacknow{}
 
 \bibliography{bibliography}
 
