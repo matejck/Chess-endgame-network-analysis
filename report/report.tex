@@ -5,22 +5,21 @@
 \usepackage{lipsum}
 \usepackage{subcaption}
 
-\title{Chess Network}
+\title{Chess Network: A Hybrid Absorbing Markov Chain and Pathfinding Approach}
 
 \author[a]{Luka Bajić}
 \author[a]{Matej Belšak}
 \author[b]{Vanja Stojanović}
 
 \affil[a]{University of Ljubljana, Faculty of Computer and Information Science, Ve\v{c}na pot 113, SI-1000 Ljubljana, Slovenia}
-\affil[b]{University of Ljubljana, Faculty of Mathemathics and Physics, Jadranska cesta 21, SI-1000 Ljubljana, Slovenia}
-
+\affil[b]{University of Ljubljana, Faculty of Mathematics and Physics, Jadranska cesta 21, SI-1000 Ljubljana, Slovenia}
 
 \leadauthor{Vanja Stojanović} 
 \authordeclaration{All authors contributed equally to this work.}
 \correspondingauthor{\textsuperscript{1}To whom correspondence should be addressed. E-mail: lb4129@student.uni-lj.si}
 
 \begin{abstract}
-Modern chess engines evaluate positions in isolation, ignoring the broader network structure of the game. Consequently, seemingly strong positions can be fragile if surrounded by losing states. We propose a novel heuristic that evaluates entire communities of game states rather than single nodes. Focusing on 7-piece endgames, we mapped the state space using limited-depth DFS and assigned Win/Draw/Loss states using Syzygy tablebases. We extracted communities using the Leiden algorithm and applied a custom metric that penalizes losing states. By condensing these communities into a macro-network, we used Dijkstra's algorithm to calculate robust, safe paths. To reduce high computational costs, we tested sampling methods. Results show probabilistic DFS sampling is highly practical, maintaining strong community structure (NMI of 0.898 at a 0.8 probability for depth 7). This scalable method effectively guides engines through structurally safe regions of the game.
+Modern chess engines evaluate positions in isolation, ignoring the broader network structure of the game. Consequently, seemingly strong positions can be fragile if surrounded by losing states. We propose a novel hybrid heuristic that evaluates entire communities of game states rather than single nodes. Focusing on 7-piece endgames, we mapped the state space using limited-depth DFS and assigned Win/Draw/Loss states using Syzygy tablebases. We extracted communities using the Leiden algorithm and formalized the macro-network as an Absorbing Markov Chain (AMC) to model global ruin probabilities under perfect opponent play. By converting these risk values into dynamic edge weights, we applied Dijkstra's algorithm to compute globally robust, safe strategic paths. To reduce computational costs, we tested sampling methods. Results show probabilistic DFS sampling is highly practical, maintaining strong community structure (NMI of 0.898 at a 0.8 probability for depth 7). This scalable framework effectively guides engines through structurally safe regions of the game space.
 \end{abstract}
 
 \dates{The manuscript was compiled on \today}
@@ -32,13 +31,9 @@ Modern chess engines evaluate positions in isolation, ignoring the broader netwo
 \thispagestyle{firststyle}
 \ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
 
-%\dropcap{M}{\bf odern chess engines use standard search techniques}, such as alpha-beta pruning and deep learning-based evaluation of positions, to look for an optimal playing strategy. They do not, however, typically take into account the macroscopic network structure of the state space, meaning the quality of the solution depends entirely on the evaluation of individual positions.
+\dropcap{M}{\bf odern chess engines use standard search techniques} such as Monte Carlo Tree Search and alpha-beta pruning for search and deep learning to evaluate positions and look for an optimal playing strategy. However, they do not consider the network structure of the game's state space. This means the quality of the solution depends entirely on evaluating individual positions.
 
-%In this work, we propose a network analysis approach that could be used as a heuristic to guide the search, using properties of the neighborhood of a position, as opposed to individual position alone. Neighborhood can be defined in different ways, but the simplest and most complete is to take into account all legal moves from starting position up to a certain depth. Building a network in this manner can be computationally intensive, so we also show that randomly sampling from the entire neighborhood does, in fact, preserve the most important properties of the network. 
-
-\dropcap{M}{\bf odern chess engines use standard search techniques} such as Monte Carlo Thee Search and alpha-beta pruning for search and deep learning to evaluate positions and look for an optimal playing strategy. However, they do not consider the network structure of the game's state space. This means the quality of the solution depends entirely on evaluating individual positions.
-
-In this work, we propose a network analysis approach to guide the search. Instead of evaluating a position in isolation, we assess the broader community of states it belongs to. The intuition behind this is that a seemingly good position might be fragile if it is surrounded by losing states. We map the local state space by exploring all legal moves from a starting position up to a limited depth using Depth First Search (DFS). By focusing on endgames with up to seven pieces, we can assign an exact Win, Draw or Loss (WDL) state to each node using Syzygy tablebases. We then extract distinct communities using the Leiden algorithm. To evaluate these groups, we introduce a new metric that rewards winning and drawing proportions while punishing losing states. By treating communities as nodes in a new graph, we model optimal and robust paths using Dijkstra's algorithm. This method naturally guides the search through safe regions of the state space while penalizing paths that pass through risky or bad communities.
+In this work, we propose a network analysis approach to guide the search. Instead of evaluating a position in isolation, we assess the broader community of states it belongs to. The intuition behind this is that a seemingly good position might be fragile if it is surrounded by losing states. We map the local state space by exploring all legal moves from a starting position up to a limited depth using Depth First Search (DFS). By focusing on endgames with up to seven pieces, we can assign an exact Win, Draw or Loss (WDL) state to each node using Syzygy tablebases. We then extract distinct communities using the Leiden algorithm. To evaluate the systemic vulnerability of these groups, we model the macro-network as an Absorbing Markov Chain, partitioning communities into transient regions and absorbing zones of imminent ruin or guaranteed victory. By deriving global absorption probabilities, we generate risk-aware edge weights to run Dijkstra's algorithm. This hybrid method naturally guides the search through safe regions of the state space while heavily penalizing paths passing through dynamically risky or bad communities.
 
 Building a full network takes a lot of computing power. Because of this, we also test whether the network sampling keeps the same communities. We use Normalized Mutual Information (NMI) to evaluate how well two different sampling methods (random node selection and probabilistic DFS) preserve the original community structure. By comparing these techniques across different sampling rates, we investigate the trade-offs between reducing the network size and maintaining structural accuracy.
 
@@ -47,13 +42,11 @@ Building a full network takes a lot of computing power. Because of this, we also
 Network analysis has so far been applied to the domain of chess positions either as a means of encoding an individual position on the board \cite{chess} with the goal of predicting the outcome of the game, or as an analysis tool, for instance, of the openings with respect to the skill level of the players \cite{chess3}. In addition, clustering methods were used on the openings to infer the result or other properties of the game \cite{chess2}. 
 
 \section*{Results}
-To evaluate our approach, we generated a state space network from the starting position with FEN: \emph{3r4/2k5/5P2/7K/8/8/8/8 b - - 0 1}. We bounded the generation to maximum depths of 5 and 7 to evaluate scalability and visualized the resulting networks using the ForceAtlas2 \cite{atlas} graph layout algorithm, as shown in Figures \ref{fig.network1} and \ref{fig.network2}.
+To evaluate our approach, we generated a state space network from the starting position with FEN: \emph{3r4/2k5/5P2/7K/8/8/8/8 b - - 0 1}. We bounded the generation to maximum depths of 5 and 7 to evaluate scalability and visualized the resulting networks using the ForceAtlas2 \cite{atlas} graph layout algorithm, as shown in Figures \ref{fig.network1}.
 
 To identify favorable regions, we ranked communities by individual quality ($\mathcal{Q}_{0.5}$) and calculated the cumulative path cost ($\mathcal{C}_{0.5}$) from the community with starting state using Dijkstra's algorithm.
 
 To test structural robustness under computational constraints, we averaged the Normalized Mutual Information (NMI) over 25 repetitions for both random node and probabilistic DFS sampling across varying probabilities ($p$).
-
-
 
 \subsection{Network with maximum depth of 5}
 We first evaluated the state space network bounded to a maximum search depth of 5.
@@ -75,120 +68,6 @@ $5$ & $0.820$ (Community 11) & $0.301$ (Community 15) \\
 \label{table.network1.scores}
 \end{table}
 
-\begin{table}[ht!]
-\centering
-\caption{Preservation of community structure at depth 5 measured by average Normalized Mutual Information (NMI) across varying probabilities.}
-\begin{tabular}{c c c}
-\hline
-\textbf{Probability ($p$)} & \textbf{Node Sampling NMI} & \textbf{DFS Sampling NMI} \\
-\hline
-% \raisebox{0.2ex}{\scriptsize $\pm 0.0037$}
-$0.9$ & $0.900$ \raisebox{0.1ex}{\scriptsize $\pm 0.023$} & $0.865$ \raisebox{0.1ex}{\scriptsize $\pm 0.021$} \\
-$0.8$ & $0.890$ \raisebox{0.1ex}{\scriptsize $\pm 0.018$} & $0.829$ \raisebox{0.1ex}{\scriptsize $\pm 0.022$} \\
-$0.7$ & $0.881$ \raisebox{0.1ex}{\scriptsize $\pm 0.027$} & $0.781$ \raisebox{0.1ex}{\scriptsize $\pm 0.019$} \\
-$0.6$ & $0.867$ \raisebox{0.1ex}{\scriptsize $\pm 0.022$} & $0.725$ \raisebox{0.1ex}{\scriptsize $\pm 0.021$} \\
-$0.5$ & $0.852$ \raisebox{0.1ex}{\scriptsize $\pm 0.015$} & $0.659$ \raisebox{0.1ex}{\scriptsize $\pm 0.019$} \\
-$0.4$ & $0.825$ \raisebox{0.1ex}{\scriptsize $\pm 0.016$} & $0.590$ \raisebox{0.1ex}{\scriptsize $\pm 0.012$} \\
-$0.3$ & $0.797$ \raisebox{0.1ex}{\scriptsize $\pm 0.014$} & $0.519$ \raisebox{0.1ex}{\scriptsize $\pm 0.006$} \\
-$0.2$ & $0.734$ \raisebox{0.1ex}{\scriptsize $\pm 0.012$} & $0.432$ \raisebox{0.1ex}{\scriptsize $\pm 0.005$} \\
-$0.1$ & $0.621$ \raisebox{0.1ex}{\scriptsize $\pm 0.009$} & $0.303$ \raisebox{0.1ex}{\scriptsize $\pm 0.164$} \\
-\hline
-\end{tabular}
-\label{table.network1.NMI}
-\end{table}
-
-\subsection{Network with maximum depth of 7}
-
-To verify the scalability of our approach, we expanded the state space generation to a maximum depth of 7. 
-
-\begin{table}[ht!]
-\centering
-\caption{Comparison of the top 5 communities ranked by individual community quality ($\mathcal{Q}_{0.5}^\textnormal{norm}$) and safest reachable targets by path cost ($\mathcal{C}_{0.5}$) for depth 7.}
-\begin{tabular}{c l l}
-\hline
-\textbf{Rank} & \textbf{Best $\mathcal{Q}_{0.5}^\textnormal{norm}$ Scores} & \textbf{Lowest Path Cost ($\mathcal{C}_{0.5}$)} \\
-\hline
-$1$ & $0.911$ (Community 19) & $0.000$ (Community 6) \\
-$2$ & $0.890$ (Community 21) & $0.164$ (Community 7) \\
-$3$ & $0.870$ (Community 22) & $0.204$ (Community 11) \\
-$4$ & $0.849$ (Community 7) & $0.257$ (Community 19) \\
-$5$ & $0.816$ (Community 11) & $0.280$ (Community 21) \\
-\hline
-\end{tabular}
-\label{table.network2.scores}
-\end{table}
-
-\begin{table}[ht!]
-\centering
-\caption{Preservation of community structure at depth 7 measured by average Normalized Mutual Information (NMI) across probabilities.}
-\begin{tabular}{c c c}
-\hline
-\textbf{Probability ($p$)} & \textbf{Node Sampling NMI} & \textbf{DFS Sampling NMI} \\
-\hline
-$0.9$ & $0.967$ \raisebox{0.1ex}{\scriptsize $\pm 0.011$} & $0.941$ \raisebox{0.1ex}{\scriptsize $\pm 0.012$} \\
-$0.8$ & $0.964$ \raisebox{0.1ex}{\scriptsize $\pm 0.011$} & $0.898$ \raisebox{0.1ex}{\scriptsize $\pm 0.013$} \\
-$0.7$ & $0.956$ \raisebox{0.1ex}{\scriptsize $\pm 0.014$} & $0.841$ \raisebox{0.1ex}{\scriptsize $\pm 0.010$} \\
-$0.6$ & $0.946$ \raisebox{0.1ex}{\scriptsize $\pm 0.015$} & $0.777$ \raisebox{0.1ex}{\scriptsize $\pm 0.010$} \\
-$0.5$ & $0.934$ \raisebox{0.1ex}{\scriptsize $\pm 0.014$} & $0.692$ \raisebox{0.1ex}{\scriptsize $\pm 0.012$} \\
-$0.4$ & $0.903$ \raisebox{0.1ex}{\scriptsize $\pm 0.017$} & $0.584$ \raisebox{0.1ex}{\scriptsize $\pm 0.009$} \\
-$0.3$ & $0.837$ \raisebox{0.1ex}{\scriptsize $\pm 0.016$} & $0.459$ \raisebox{0.1ex}{\scriptsize $\pm 0.008$} \\
-$0.2$ & $0.721$ \raisebox{0.1ex}{\scriptsize $\pm 0.021$} & $0.463$ \raisebox{0.1ex}{\scriptsize $\pm 0.103$} \\
-$0.1$ & $0.677$ \raisebox{0.1ex}{\scriptsize $\pm 0.017$} & $0.426$ \raisebox{0.1ex}{\scriptsize $\pm 0.197$} \\
-\hline
-\end{tabular}
-\label{table.network2.NMI}
-\end{table}
-
-\section*{Discussion}
-The visualizations made with the ForceAtlas2 algorithm (networks \ref{fig.network1.wdl} and \ref{fig.network2.wdl}) reveal the structure inherent in the chess state space. Because the layout pulls connected nodes together and pushes disconnected ones apart, the network forms numerous dense regions. These densely connected regions indicate that the network has high modularity.
-
-Leiden algorithm successfully detects these densely connected regions as communities, as shown in \ref{fig.network1.leiden} and \ref{fig.network2.leiden}. If multiple distinct densely connected regions share many connections between them, the algorithm detects them as one community. 
-
-Detected communities are then converted into a community network (networks \ref{fig.network1.leiden} and \ref{fig.network2.leiden}), such that communities are condensed into single nodes and multiple connections are simplified into single edges. By shrinking thousands of individual positions into a few main regions, we create a simple map of the game. Simplifying the connections lets us see the general flow between these areas. When we visualize community network, its overall shape closely represents the form of the original graph.
-
-Table \ref{table.network1.scores} represents top 5 communities in the network with limited depth of 5 using two different scoring methods. The first column ranks the communities based on their individual score, denoted as $\mathcal{Q}_{0.5}^\text{norm}$. Community 14 has the highest $\mathcal{Q}_{0.5}^\text{norm}$ of 0.938. The second column ranks the safest reachable communities based on cumulative path cost, denoted as $\mathcal{C}_{0.5}$. This cost is calculated using Dijkstra's algorithm. Community 11 has the $\mathcal{C}_{0.5}$ of 0.000, because it contains the starting position of the game. That is why Community 1 has the best $\mathcal{C}_{0.5}$ of 0.186. Because the path cost accumulates with every step, the lowest score is obtained in one of the communities that is neighbor of the one with starting position. 
-
-%Building a full network takes a lot of computing power. Because of this, we tested if sampling the network keeps the same communities. 
-Table \ref{table.network1.NMI} and Table \ref{table.network2.NMI} show the results for Node Sampling NMI and DFS Sampling NMI.
-
-In both cases, as the probability parameter $p$ is lowered, the NMI for node sampling drops slower than the NMI for DFS sampling. However, node sampling cannot be utilized when creating the network, meaning the full network must already exist for this method to work. NMI for DFS sampling drops faster as $p$ decreases, but it seems that for the network with depth 7, it dropped a bit less compared to the depth 5 network. This means we can use probabilistic DFS sampling to save time during generation while still keeping a reasonably accurate map of communities.
-
-
-\section*{Methods}
-For a given state space network $G$, let $\mathcal{W}$ be set of all winning positions, $\mathcal{D}$ set of all drawing positions and $\mathcal{L}$ set of all losing positions in $G$. We define
-\begin{align*}
-    W(c_i) = \frac{|c_i \cap \mathcal{W}|}{|c_i|}, \quad  D(c_i) = \frac{|c_i \cap \mathcal{D}|}{|c_i|}, \quad L(c_i) = \frac{|c_i \cap \mathcal{L}|}{|c_i|}.
-\end{align*}
-
-To evaluate the quality of the communities found by the Leiden algorithm, we designed a custom metric based on the proportions of winning, drawing, and losing states. For a given community $c_i$, we define the initial quality function as:
-\begin{align*}
-    \mathcal{Q}_\alpha(c_i) = 1 + \alpha  W(c_i) - (1 - \alpha) L(c_i).
-\end{align*}
-The parameter $\alpha$ allows us to balance how much we reward winning states versus how heavily we punish losing states. We then normalize this function so that the best possible community scores a 1 and the worst possible community scores a 0:
-\begin{align}
-    \mathcal{Q}_\alpha^{\text{norm}}(c_i) = W(c_i) + (1 - \alpha)D(c_i).
-    \label{Q_norm}
-\end{align}
-This normalized score gives us individual evaluation for every community.
-
-However, simply picking the highest scoring community is not enough, because reaching it might require passing through highly dangerous ones. To model safe navigation, we convert these quality scores into edge weights for pathfinding. The weight of a directed edge $(u, v)$ from one community to another is defined as:
-\begin{align*}
-    w(u, v) = -\ln(\mathcal{Q}_\alpha^{\text{norm}}(v)).
-\end{align*}
- If a target community $v$ is perfect (a score of 1), its cost becomes zero. As the community's quality gets worse and closer to zero, the penalty grows exponentially. This guarantees that transitioning into bad communities is heavily punished.
-
- Finally, we calculate the safest route to any target community using the cumulative path cost:
-\begin{align}
-    \mathcal{C}_\alpha(c_i) &= \min_{P \in \mathcal{P}(c_s, c_i)} \sum_{(u, v) \in P} w(u, v), \nonumber\\
-    &= \min_{P \in \mathcal{P}(c_s, c_i)} \sum_{(u, v) \in P} \left[ -\ln(\mathcal{Q}_\alpha^{\text{norm}}(v)) \right],
-    \label{C}
-\end{align}
-where $c_s$ is the starting community (the community that contains the starting position), $\mathcal{P}(c_s, c_i)$ is the set of all valid paths from the starting community to the target community $c_i$ and $w(u, v)$ is the weight of the edge $(u, v) \in G$.
-
-By applying Dijkstra's algorithm to \eqref{C}, we find the path that minimizes the total accumulated edge weights. This guides the search through the most robust and secure regions of the game while avoiding bad communities.
-
-
-% trim={left bottom right top}
 \clearpage
 \begin{figure*}[t!]
     \centering
@@ -214,44 +93,154 @@ By applying Dijkstra's algorithm to \eqref{C}, we find the path that minimizes t
     \label{fig.network1}
 \end{figure*}
 
-\begin{figure*}[t!]
-    \centering
-    \begin{subfigure}{0.32\linewidth}
-        \includegraphics[width=\linewidth, trim={512 128 512 128}, clip]{results/network2/KRvKP_7_wdl.png}
-        \centering
-        \caption{Original network}
-        \label{fig.network2.wdl}
-    \end{subfigure}\hfill
-    \begin{subfigure}{0.32\linewidth}
-        \includegraphics[width=\linewidth, trim={512 128 512 128}, clip]{results/network2/KRvKP_7_leiden.png}
-        \centering
-        \caption{Original network with communities}
-        \label{fig.network2.leiden}
-    \end{subfigure}
-    \begin{subfigure}{0.32\linewidth}
-        \includegraphics[width=\linewidth, trim={400 128 400 128}, clip]{results/network2/KRvKP_7_community.png}
-        \centering
-        \caption{Community network}
-        \label{fig.network2.community}
-    \end{subfigure}
-    \caption{Visualizations of the state space. Graph \textbf{(a)} shows the original network where each node represents a game position and its neighbors represent all subsequent legal moves. Green nodes indicate winning positions, gray represent drawing positions and red represent losing positions. Graph \textbf{(b)} highlights the communities discovered by the Leiden algorithm, each distinguished by a different color. Graph \textbf{(c)} displays the abstracted network reduced from Graph \textbf{(b)}, where communities containing $\le 0.5\%$ of the total nodes are excluded. The remaining communities are condensed into single nodes and multiple connections are simplified into single edges. Node colors reflect the mixed frequencies of winning, drawing and losing positions of that community. The starting position resides in Community 6.}
-    \label{fig.network2}
-\end{figure*}
+\begin{table}[ht]
+\centering
+\caption{Preservation of community structure at depth 5 measured by average Normalized Mutual Information (NMI) across varying probabilities.}
+\begin{tabular}{c c c}
+\hline
+\textbf{Probability ($p$)} & \textbf{Node Sampling NMI} & \textbf{DFS Sampling NMI} \\
+\hline
+$0.9$ & $0.900$ \raisebox{0.1ex}{\scriptsize $\pm 0.023$} & $0.865$ \raisebox{0.1ex}{\scriptsize $\pm 0.021$} \\
+$0.8$ & $0.890$ \raisebox{0.1ex}{\scriptsize $\pm 0.018$} & $0.829$ \raisebox{0.1ex}{\scriptsize $\pm 0.022$} \\
+$0.7$ & $0.881$ \raisebox{0.1ex}{\scriptsize $\pm 0.027$} & $0.781$ \raisebox{0.1ex}{\scriptsize $\pm 0.019$} \\
+$0.6$ & $0.867$ \raisebox{0.1ex}{\scriptsize $\pm 0.022$} & $0.725$ \raisebox{0.1ex}{\scriptsize $\pm 0.021$} \\
+$0.5$ & $0.852$ \raisebox{0.1ex}{\scriptsize $\pm 0.015$} & $0.659$ \raisebox{0.1ex}{\scriptsize $\pm 0.019$} \\
+$0.4$ & $0.825$ \raisebox{0.1ex}{\scriptsize $\pm 0.016$} & $0.590$ \raisebox{0.1ex}{\scriptsize $\pm 0.012$} \\
+$0.3$ & $0.797$ \raisebox{0.1ex}{\scriptsize $\pm 0.014$} & $0.519$ \raisebox{0.1ex}{\scriptsize $\pm 0.006$} \\
+$0.2$ & $0.734$ \raisebox{0.1ex}{\scriptsize $\pm 0.012$} & $0.432$ \raisebox{0.1ex}{\scriptsize $\pm 0.005$} \\
+$0.1$ & $0.621$ \raisebox{0.1ex}{\scriptsize $\pm 0.009$} & $0.303$ \raisebox{0.1ex}{\scriptsize $\pm 0.164$} \\
+\hline
+\end{tabular}
+\label{table.network1.NMI}
+\end{table}
 
+\subsection{Network with maximum depth of 7}
+To verify the scalability of our approach, we expanded the state space generation to a maximum depth of 7. Results are available at \footnote{https://github.com/matejck/Chess-endgame-network-analysis/tree/main/report/results/network2}.
 
+\section*{Discussion}
+The visualizations made with the ForceAtlas2 algorithm (\ref{fig.network1.wdl}) reveal the structure inherent in the chess state space. Because the layout pulls connected nodes together and pushes disconnected ones apart, the network forms numerous dense regions. These densely connected regions indicate that the network has high modularity.
+
+Leiden algorithm successfully detects these densely connected regions as communities, as shown in \ref{fig.network1.leiden}. If multiple distinct densely connected regions share many connections between them, the algorithm detects them as one community. 
+
+Detected communities are then converted into a community network (\ref{fig.network1.leiden}), such that communities are condensed into single nodes and multiple connections are simplified into single edges. By shrinking thousands of individual positions into a few main regions, we create a simple map of the game. Simplifying the connections lets us see the general flow between these areas. When we visualize community network, its overall shape closely represents the form of the original graph.
+
+Table \ref{table.network1.scores} represents top 5 communities in the network with limited depth of 5 using two different scoring methods. The first column ranks the communities based on their individual score, denoted as $\mathcal{Q}_{0.5}^\text{norm}$. Community 14 has the highest $\mathcal{Q}_{0.5}^\text{norm}$ of 0.938. The second column ranks the safest reachable communities based on cumulative path cost, denoted as $\mathcal{C}_{0.5}$. This cost is calculated using Dijkstra's algorithm. Community 11 has the $\mathcal{C}_{0.5}$ of 0.000, because it contains the starting position of the game. That is why Community 1 has the best $\mathcal{C}_{0.5}$ of 0.186. Because the path cost accumulates with every step, the lowest score is obtained in one of the communities that is neighbor of the one with starting position. 
+
+Table \ref{table.network1.NMI} shows the results for Node Sampling NMI and DFS Sampling NMI.
+
+In both cases, as the probability parameter $p$ is lowered, the NMI for node sampling drops slower than the NMI for DFS sampling. However, node sampling cannot be utilized when creating the network, meaning the full network must already exist for this method to work. NMI for DFS sampling drops faster as $p$ decreases, but it seems that for the network with depth 7, it dropped a bit less compared to the depth 5 network. This means we can use probabilistic DFS sampling to save time during generation while still keeping a reasonably accurate map of communities.
+
+\section*{Methods}
+For a given state space network $G$, let $\mathcal{W}$ be set of all winning positions, $\mathcal{D}$ set of all drawing positions and $\mathcal{L}$ set of all losing positions in $G$. We define
+\begin{align*}
+    W(c_i) = \frac{|c_i \cap \mathcal{W}|}{|c_i|}, \quad  D(c_i) = \frac{|c_i \cap \mathcal{D}|}{|c_i|}, \quad L(c_i) = \frac{|c_i \cap \mathcal{L}|}{|c_i|}.
+\end{align*}
+
+To evaluate the quality of the communities found by the Leiden algorithm, we designed a custom metric based on the proportions of winning, drawing, and losing states. For a given community $c_i$, we define the normalized quality function as:
+\begin{align}
+    \mathcal{Q}_\alpha^{\text{norm}}(c_i) = W(c_i) + (1 - \alpha)D(c_i).
+    \label{Q_norm}
+\end{align}
+This baseline score maps individual communities from 0 (worst) to 1 (perfect).
+
+\subsection*{Absorbing Markov Chain Formulation}
+To capture systemic fragility and long-term risk under perfect opponent play, we map the macro-network into an Absorbing Markov Chain \cite{markov_chains}. Let $\mathcal{C}$ be the set of all discovered communities. We partition $\mathcal{C}$ into transient states $\mathcal{T}$ and absorbing states $\mathcal{A}$ based on a quality threshold $\tau$. A community $c_i \in \mathcal{A}$ if $\mathcal{Q}_\alpha^{\text{norm}}(c_i) < \tau$ (representing unavoidable loss/ruin) or if $\mathcal{Q}_\alpha^{\text{norm}}(c_i) = 1$ (representing guaranteed victory). The remaining states are transient ($c_i \in \mathcal{T}$).
+
+The macro-transition matrix $P \in \mathbb{R}^{|\mathcal{C}| \times |\mathcal{C}|}$ is organized in canonical form \cite{markov_chains}:
+\begin{align}
+    P = \begin{bmatrix} Q & R \\ \mathbf{0} & I \end{bmatrix}
+    \label{P_matrix}
+\end{align}
+where $Q \in \mathbb{R}^{|\mathcal{T}| \times |\mathcal{T}|}$ encodes transition probabilities between transient states, $R \in \mathbb{R}^{|\mathcal{T}| \times |\mathcal{A}|}$ dictates transitions from transient states to absorbing states, and $I$ represents the identity matrix.
+
+The fundamental matrix $N = (I - Q)^{-1}$ defines the expected number of steps spent within transient regions before absorption \cite{markov_chains}. The global absorption probability matrix $B \in \mathbb{R}^{|\mathcal{T}| \times |\mathcal{A}|}$ is derived as:
+\begin{align}
+    B = N R
+    \label{B_matrix}
+\end{align}
+where entry $B_{ij}$ represents the precise probability that a sequence beginning in transient community $c_i$ will eventually terminate in absorbing community $c_j$. Letting $\mathcal{A}_{\text{loss}} \subseteq \mathcal{A}$ capture the set of losing absorbing states, the global ruin probability for any transient state $c_i$ is computed as:
+\begin{align}
+    P_{\text{ruin}}(c_i) = \sum_{j \in \mathcal{A}_{\text{loss}}} B_{ij}.
+    \label{P_ruin}
+\end{align}
+
+\subsection*{Hybrid Risk-Aware Pathfinding}
+To bridge the probabilistic macroscopic safety metrics with directional sequence planning, we use $P_{\text{ruin}}$ to instantiate dynamic edge costs for sequential routing. The weight $w(u, v)$ of transitioning from transient community $u$ to $v$ is formalized as the negative log-likelihood of safety:
+\begin{align}
+    w(u, v) = -\ln\left(1 - P_{\text{ruin}}(v)\right).
+    \label{w_amc}
+\end{align}
+As the long-term probability of collapsing into a losing state grows, the edge penalty increases exponentially. Finally, we execute Dijkstra's algorithm over the transient macro-network to establish the optimal path minimizing cumulative global risk:
+\begin{align}
+    \mathcal{C}_{\text{AMC}}(c_i) = \min_{P \in \mathcal{P}(c_s, c_i)} \sum_{(u, v) \in P} \left[ -\ln(1 - P_{\text{ruin}}(v)) \right],
+    \label{C_amc}
+\end{align}
+where $c_s$ is the starting community. This guarantees a strategic sequence prioritizing global macro-safety over localized search parameters.
+
+\bibliography{bibliography}
 
 \clearpage
 
+\section*{Appendix: Mathematical Framework for the Two-Tier Absorbing Markov Chain}
+\label{sec:appendix}
 
-\subsection*{Mathematical Modeling of Chess Positions}
+To establish a mathematically rigorous projection of the micro-level chess position transitions onto the community-level macro-network, we formalize a two-tier absorbing Markov framework. This framework explicitly resolves the boundary-state transition dynamics between condensed macro-states. Let $D = (V, E)$ represent the global directed position-level chess graph, where $p(u \to v)$ denotes the probability of transitioning from position $u$ to a neighboring legal position $v$.
 
-We treat chess positions as nodes in a graph, and transitions between positions as directed edges.
-In a directed chess position graph $D$, there exists a directed edge between two positions $v, u \in V(D)$ if and only if there positions are one valid chess move apart.
-This gives us a discrete distance between all chess moves, where reachable neighboring chess positions are exactly one distance apart.
+\subsection*{1. Local Sub-Chain and Micro-Canonical Form}
+For a given transient community $c_i \in \mathcal{T}$, the internal positions $u \in c_i$ are treated as transient states within a localized sub-chain, while all adjacent macro-communities $c_j \in \mathcal{C} \setminus \{c_i\}$ act as distinct absorbing destinations. We construct the local transition matrix $P^{(i)}$ for community $c_i$ in canonical form:
+\begin{equation}
+P^{(i)} = \begin{bmatrix} Q^{(i)} & R^{(i)} \\ \mathbf{0} & I \end{bmatrix}
+\end{equation}
+where the submatrix $Q^{(i)} \in \mathbb{R}^{|c_i| \times |c_i|}$ defines internal position-to-position transitions within the community boundary:
+\begin{equation}
+Q^{(i)}_{u,v} = \begin{cases} p(u \to v) & \text{if } v \in c_i \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+and the submatrix $R^{(i)} \in \mathbb{R}^{|c_i| \times (|\mathcal{C}|-1)}$ defines the escaping transition probabilities from internal transient positions directly into adjacent target communities:
+\begin{equation}
+R^{(i)}_{u,c_j} = \sum_{v \in c_j} p(u \to v), \quad \forall c_j \neq c_i
+\end{equation}
 
-% \acknow{The authors would like to\dots}
-% \showacknow{}
+The local fundamental matrix $N^{(i)} = (I - Q^{(i)})^{-1}$ determines the expected number of times the micro-walk visits each transient position inside $c_i$ prior to escaping the community. The localized absorption probability matrix $B^{(i)}$ is then derived as:
+\begin{equation}
+B^{(i)} = N^{(i)} R^{(i)}
+\end{equation}
+where the matrix element $B^{(i)}_{u,c_j}$ represents the exact probability that a game state currently residing at position $u \in c_i$ will eventually exit into community $c_j$.
 
-\bibliography{bibliography}
+\subsection*{2. State Occupancy Frequencies in Directed Acyclic Graphs}
+Because the position-level micro-network $D=(V,E)$ is constructed via a depth-bounded depth-first search (DFS) radiating from a singular initial game state $v_{\text{start}}$, the graph is inherently a finite Directed Acyclic Graph (DAG). Consequently, a conventional steady-state stationary distribution ($\Pi = \Pi P$) is mathematically trivial, concentrating entirely on terminal sinks. To rigorously weight the boundary states, we define a transient state occupancy vector $\mathbf{x} \in \mathbb{R}^{|V|}$, where entry $x(u)$ represents the expected number of times position $u$ is visited during a game originating at $v_{\text{start}}$.
+
+Let $P_{\text{global}} \in \mathbb{R}^{|V| \times |V|}$ be the transition matrix of the global position graph, and let $\mathbf{e_{\text{start}}} \in \mathbb{R}^{|V|}$ be a standard basis vector representing a probability mass of $1$ at the starting node $v_{\text{start}}$. Because $D$ is a DAG, the matrix $P_{\text{global}}$ is strictly nilpotent, and the global fundamental matrix $\mathcal{N}$ converges analytically via a geometric series:
+\begin{equation}
+\mathcal{N} = (I - P_{\text{global}})^{-1} = \sum_{k=0}^{\infty} (P_{\text{global}})^k
+\end{equation}
+The absolute state occupancy frequencies across the global network are then exactly mapped by:
+\begin{equation}
+\mathbf{x} = \mathbf{e_{\text{start}}}\mathcal{N}
+\end{equation}
+For any transient community $c_i \in \mathcal{T}$, the conditional intra-community state probability $\pi_i(u)$ assigned to position $u \in c_i$ is properly normalized relative to the local community density mass:
+\begin{equation}
+\pi_i(u) = \frac{x(u)}{\sum_{v \in c_i} x(v)}
+\end{equation}
+This formulation ensures that the macro-transition matrix elements $P_{ij}$ accurately reflect game trajectories branching directly from the unique starting position of the match.
+
+\subsection*{3. Synthesizing the Macro-Transition Matrix}
+By taking the expectation of the local absorption probabilities over this conditional distribution, the rigorous macro-transition probability $P_{ij}$ from community $c_i$ to community $c_j$ is defined as:
+\begin{equation}
+P_{ij} = \sum_{u \in c_i} \pi_i(u) B^{(i)}_{u,c_j}
+\end{equation}
+Because $\sum_{j \neq i} B^{(i)}_{u,c_j} = 1$ for all valid positions under guaranteed boundary escape, this formulation strictly satisfies the stochastic row conditions $\sum_{j \neq i} P_{ij} = 1$ and $P_{ii} = 0$, ensuring the mathematical completeness of the macro-network transition matrix $P$.
+
+\subsection*{4. Boundary Asymptotics and Graph Pruning}
+The risk-aware edge-weight mapping $w(u,v) = -\ln(1 - P_{\text{ruin}}(v))$ introduces a coordinate singularity when a transient macro-state leads inevitably to a losing absorbing region. If a community $v$ exhibits a global ruin probability of $P_{\text{ruin}}(v) = 1$, the edge cost evaluates to:
+\begin{equation}
+\lim_{P_{\text{ruin}}(v) \to 1} \left[-\ln\left(1 - P_{\text{ruin}}(v)\right)\right] = \infty
+\end{equation}
+In our hybrid implementation, any directed edge pointing to a community where $P_{\text{ruin}}(v) = 1$ is assigned a cost of $\infty$ and is structurally pruned from the active adjacency list prior to executing Dijkstra's algorithm.
+
+Conversely, if a destination community $v$ is perfectly secure such that it safely communicates only with winning absorbing states, its global ruin probability drops to $P_{\text{ruin}}(v) = 0$. The edge cost smoothly yields:
+\begin{equation}
+w(u,v) = -\ln(1 - 0) = 0
+\end{equation}
+This zero-cost behavior establishes a terminal "sink highway" across the macro-network, naturally drawing Dijkstra's pathfinding algorithm toward structurally verified winning zones with zero accumulated risk penalty.
 
 \end{document}
